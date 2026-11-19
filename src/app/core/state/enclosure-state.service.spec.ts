@@ -87,4 +87,22 @@ describe('EnclosureStateService', () => {
     expect(service.params().measurementSystem).toBe('metric');
     expect(service.params().length).toBe(80);
   });
+
+  it('applies consumer device presets accurately', () => {
+    service.applyPreset('flipper');
+    expect(service.params().width).toBe(40);
+    expect(service.params().length).toBe(100);
+    expect(service.params().displayBezel?.enabled).toBeTrue();
+    expect(service.params().lanyardLoop?.enabled).toBeTrue();
+
+    service.applyPreset('handheld-pc');
+    expect(service.params().width).toBe(210);
+    expect(service.params().length).toBe(95);
+    expect(service.params().sideGrips?.enabled).toBeTrue();
+
+    service.applyPreset('retro-console');
+    expect(service.params().width).toBe(82);
+    expect(service.params().length).toBe(135);
+    expect(service.params().holes.some((h) => h.shape === 'dpad')).toBeTrue();
+  });
 });

@@ -26,13 +26,7 @@ export const lidTopChamferSize = (params: Params): number => {
   return Math.min(params.lidTopChamfer, upper);
 };
 
-export const bottomChamferTool = (
-  l: number,
-  w: number,
-  c: number,
-  r = 8,
-  s = 48,
-): Geom3 => {
+export const bottomChamferTool = (l: number, w: number, c: number, r = 8, s = 48): Geom3 => {
   const eps = 0.01;
   const cc = Math.max(Math.min(c, r * 0.9, l / 2 - 0.5, w / 2 - 0.5), 0);
   if (cc <= 0) {

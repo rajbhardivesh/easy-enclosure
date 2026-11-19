@@ -2,7 +2,7 @@ import type { Surface } from './enclosure';
 
 export type MeasurementSystem = 'metric' | 'imperial';
 
-export type HoleShape = 'circle' | 'square' | 'rectangle' | 'double-d';
+export type HoleShape = 'circle' | 'square' | 'rectangle' | 'double-d' | 'dpad' | 'hexagon';
 
 export type Hole = {
   shape: HoleShape;
@@ -14,6 +14,102 @@ export type Hole = {
   y: number;
   flatWidth?: number;
   rotation?: number;
+  cornerRadius?: number;
+  chamfer?: number;
+};
+
+export type VentGrillePattern = 'slots' | 'perforated' | 'honeycomb';
+
+export type VentGrille = {
+  surface: Surface;
+  x: number;
+  y: number;
+  pattern: VentGrillePattern;
+  count: number;
+  slotWidth: number;
+  slotLength: number;
+  spacing: number;
+  cornerRadius?: number;
+  rotation?: number;
+};
+
+export const DEFAULT_VENT_GRILLE: VentGrille = {
+  surface: 'back',
+  x: 0,
+  y: 0,
+  pattern: 'slots',
+  count: 5,
+  slotWidth: 2,
+  slotLength: 18,
+  spacing: 3.5,
+  cornerRadius: 1,
+  rotation: 0,
+};
+
+export type DisplayBezel = {
+  enabled: boolean;
+  surface?: Surface;
+  x: number;
+  y: number;
+  width: number;
+  length: number;
+  cornerRadius: number;
+  recessWidth: number;
+  recessLength: number;
+  recessDepth: number;
+};
+
+export const DEFAULT_DISPLAY_BEZEL: DisplayBezel = {
+  enabled: false,
+  surface: 'top',
+  x: 0,
+  y: 0,
+  width: 38,
+  length: 24,
+  cornerRadius: 2,
+  recessWidth: 42,
+  recessLength: 28,
+  recessDepth: 1.2,
+};
+
+export type LanyardCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+export type LanyardLoop = {
+  enabled: boolean;
+  corner: LanyardCorner;
+  slotWidth: number;
+  slotLength: number;
+  barDiameter: number;
+};
+
+export const DEFAULT_LANYARD_LOOP: LanyardLoop = {
+  enabled: false,
+  corner: 'bottom-right',
+  slotWidth: 3.5,
+  slotLength: 10,
+  barDiameter: 2,
+};
+
+export type SideGripStyle = 'ribs' | 'grooves';
+
+export type SideGrips = {
+  enabled: boolean;
+  style: SideGripStyle;
+  count: number;
+  width: number;
+  length: number;
+  depth: number;
+  spacing: number;
+};
+
+export const DEFAULT_SIDE_GRIPS: SideGrips = {
+  enabled: false,
+  style: 'ribs',
+  count: 6,
+  width: 2,
+  length: 14,
+  depth: 1,
+  spacing: 3.5,
 };
 
 export type PCBMount = {
@@ -50,6 +146,14 @@ export type SnapFit = {
   clearance: number;
 };
 
+export type PCBModelType =
+  | 'box'
+  | 'custom'
+  | 'rpi-pico'
+  | 'arduino-uno'
+  | 'esp32'
+  | 'flipper-module';
+
 export type PCBPreview = {
   enabled: boolean;
   width: number;
@@ -58,6 +162,14 @@ export type PCBPreview = {
   componentHeight: number;
   x: number;
   y: number;
+  modelType?: PCBModelType;
+  modelFileName?: string;
+  modelTriangleCount?: number;
+  zOffset?: number;
+  rotationX?: number;
+  rotationY?: number;
+  rotationZ?: number;
+  scale?: number;
 };
 
 export type CableClamp = {
@@ -139,6 +251,10 @@ export type Params = {
   baseBedChamfer: number;
   lidBedChamfer: number;
   lidTopChamfer: number;
+  ventGrilles?: VentGrille[];
+  displayBezel?: DisplayBezel;
+  lanyardLoop?: LanyardLoop;
+  sideGrips?: SideGrips;
 };
 
 export const DEFAULT_PARAMS: Params = {
@@ -300,10 +416,20 @@ export const DEFAULT_PARAMS: Params = {
     componentHeight: 8,
     x: 0,
     y: 0,
+    modelType: 'box',
+    zOffset: 0,
+    rotationX: 0,
+    rotationY: 0,
+    rotationZ: 0,
+    scale: 1,
   },
   baseBedChamfer: 0.6,
   lidBedChamfer: 0.6,
   lidTopChamfer: 0.4,
+  ventGrilles: [],
+  displayBezel: { ...DEFAULT_DISPLAY_BEZEL },
+  lanyardLoop: { ...DEFAULT_LANYARD_LOOP },
+  sideGrips: { ...DEFAULT_SIDE_GRIPS },
 };
 
 export const cloneParams = (params: Params): Params => {

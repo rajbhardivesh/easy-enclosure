@@ -18,7 +18,9 @@
     >
       ⚠ PCB Collision:
       @if (pcbCollision().hitsWalls) {
-        <span>Collides with enclosure walls / partitions ({{ pcbCollision().overlapVolume }} mm³)</span>
+        <span
+          >Collides with enclosure walls / partitions ({{ pcbCollision().overlapVolume }} mm³)</span
+        >
       }
       @if (pcbCollision().hitsWalls && pcbCollision().hitsCeiling) {
         <span> · </span>

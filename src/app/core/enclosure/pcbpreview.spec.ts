@@ -1,6 +1,8 @@
 import { measureBoundingBox, measureVolume } from '@jscad/modeling/src/measurements';
+import { cuboid } from '@jscad/modeling/src/primitives';
 
 import { cloneParams, DEFAULT_PARAMS, type Params } from '../params';
+import { normalizePcbModel } from '../pcb/pcb-model-loader';
 import { base } from './base';
 import {
   cavityFloorZ,
@@ -270,6 +272,38 @@ describe('pcbpreview', () => {
 
       const baseSolid = base(params);
       const result = pcbCollision(params, baseSolid);
+      expect(result.collides).toBeTrue();
+      expect(result.hitsWalls).toBeTrue();
+    });
+
+    it('supports 3D custom board geometry with transforms', () => {
+      params.width = 100;
+      params.length = 80;
+      params.pcbPreview.zOffset = 5;
+      params.pcbPreview.scale = 1.5;
+      params.pcbPreview.rotationZ = 90;
+
+      const raw = cuboid({ size: [20, 10, 2] });
+      const customGeom = normalizePcbModel(raw).normalized;
+      const board = pcbBoard(params, customGeom);
+      expect(board).toBeDefined();
+
+      const [min, max] = measureBoundingBox(board) as [number[], number[]];
+      const width = max[0] - min[0];
+      const length = max[1] - min[1];
+      expect(width).toBeCloseTo(15, 0.5);
+      expect(length).toBeCloseTo(30, 0.5);
+      expect(min[2]).toBeGreaterThanOrEqual(pcbRestZ(params) + 5 - 1e-4);
+    });
+
+    it('detects collision with custom 3D board geometry', () => {
+      params.pcbPreview.enabled = true;
+      params.width = 60;
+      params.length = 60;
+      params.internalWalls = [];
+
+      const oversizedGeom = cuboid({ size: [75, 75, 4] });
+      const result = pcbCollision(params, undefined, oversizedGeom);
       expect(result.collides).toBeTrue();
       expect(result.hitsWalls).toBeTrue();
     });

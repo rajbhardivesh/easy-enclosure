@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { DEFAULT_PARAMS, type MeasurementSystem, type Params, cloneParams } from '../params';
 import { convertParams } from '../units';
+import { PRESETS, type PresetKey } from '../presets';
 
 @Injectable({ providedIn: 'root' })
 export class EnclosureStateService {
@@ -67,25 +68,19 @@ export class EnclosureStateService {
     this.loading.set(false);
   }
 
+  applyPreset(key: PresetKey): void {
+    const preset = PRESETS[key];
+    if (preset) {
+      const currentSystem = this.params().measurementSystem ?? 'metric';
+      let targetParams = cloneParams(preset.params);
+      if (currentSystem === 'imperial') {
+        targetParams = convertParams(targetParams, 'imperial');
+      }
+      this.params.set(targetParams);
+    }
+  }
+
   resetToSimpleEnclosure(): void {
-    this.params.update((current) => ({
-      ...current,
-      holes: [],
-      pcbMounts: [],
-      internalWalls: [],
-      cableClamps: [],
-      waterProof: false,
-      wallMounts: false,
-      lidScrews: false,
-      dinRailMount: false,
-      snapFit: {
-        ...current.snapFit,
-        enabled: false,
-      },
-      pcbPreview: {
-        ...current.pcbPreview,
-        enabled: false,
-      },
-    }));
+    this.applyPreset('simple');
   }
 }

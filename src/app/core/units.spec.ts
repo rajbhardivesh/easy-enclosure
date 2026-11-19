@@ -6,8 +6,12 @@ import { lid } from './enclosure/lid';
 import { DEFAULT_PARAMS, cloneParams, type Params } from './params';
 import {
   convertDimension,
+  convertDisplayBezel,
   convertHole,
+  convertLanyardLoop,
   convertParams,
+  convertSideGrips,
+  convertVentGrille,
   formatMeasurement,
   inchesToMm,
   mmToInches,
@@ -47,30 +51,97 @@ describe('Units & Measurement Conversion', () => {
     expect(formatMeasurement(1.234, 'imperial', 3)).toBe('1.234 in');
   });
 
-  it('converts a hole preserving rotation (angular) but scaling coordinates', () => {
+  it('converts a hole preserving rotation (angular) but scaling coordinates and cornerRadius', () => {
     const original = {
-      shape: 'circle' as const,
+      shape: 'rectangle' as const,
       surface: 'front' as const,
       x: 10,
       y: 20,
       diameter: 12.5,
       width: 10,
-      length: 10,
+      length: 15,
       flatWidth: 11,
       rotation: 45,
+      cornerRadius: 2.5,
     };
 
     const imperial = convertHole(original, 'metric', 'imperial');
     expect(imperial.rotation).toBe(45);
     expect(imperial.x).toBe(mmToInches(10));
     expect(imperial.y).toBe(mmToInches(20));
-    expect(imperial.diameter).toBe(mmToInches(12.5));
+    expect(imperial.width).toBe(mmToInches(10));
+    expect(imperial.length).toBe(mmToInches(15));
+    expect(imperial.cornerRadius).toBe(mmToInches(2.5));
 
     const roundtrip = convertHole(imperial, 'imperial', 'metric');
     expect(roundtrip.rotation).toBe(45);
     expect(roundtrip.x).toBe(10);
     expect(roundtrip.y).toBe(20);
-    expect(roundtrip.diameter).toBe(12.5);
+    expect(roundtrip.width).toBe(10);
+    expect(roundtrip.length).toBe(15);
+    expect(roundtrip.cornerRadius).toBe(2.5);
+  });
+
+  it('converts consumer electronic features (display bezel, vent grilles, lanyard loop, side grips)', () => {
+    const bezel = {
+      enabled: true,
+      surface: 'top' as const,
+      x: 5,
+      y: 10,
+      width: 40,
+      length: 25,
+      cornerRadius: 3,
+      recessWidth: 44,
+      recessLength: 29,
+      recessDepth: 1.5,
+    };
+    const impBezel = convertDisplayBezel(bezel, 'metric', 'imperial');
+    expect(impBezel.width).toBe(mmToInches(40));
+    expect(impBezel.recessDepth).toBe(mmToInches(1.5));
+    const roundtripBezel = convertDisplayBezel(impBezel, 'imperial', 'metric');
+    expect(roundtripBezel.width).toBe(40);
+    expect(roundtripBezel.recessDepth).toBe(1.5);
+
+    const grille = {
+      surface: 'back' as const,
+      x: 0,
+      y: 0,
+      pattern: 'slots' as const,
+      count: 5,
+      slotWidth: 2,
+      slotLength: 16,
+      spacing: 4,
+      cornerRadius: 1,
+      rotation: 90,
+    };
+    const impGrille = convertVentGrille(grille, 'metric', 'imperial');
+    expect(impGrille.rotation).toBe(90);
+    expect(impGrille.slotWidth).toBe(mmToInches(2));
+    expect(impGrille.slotLength).toBe(mmToInches(16));
+
+    const loop = {
+      enabled: true,
+      corner: 'bottom-right' as const,
+      slotWidth: 4,
+      slotLength: 10,
+      barDiameter: 2,
+    };
+    const impLoop = convertLanyardLoop(loop, 'metric', 'imperial');
+    expect(impLoop.slotWidth).toBe(mmToInches(4));
+    expect(impLoop.barDiameter).toBe(mmToInches(2));
+
+    const grips = {
+      enabled: true,
+      style: 'ribs' as const,
+      count: 6,
+      width: 2,
+      length: 15,
+      depth: 1,
+      spacing: 4,
+    };
+    const impGrips = convertSideGrips(grips, 'metric', 'imperial');
+    expect(impGrips.count).toBe(6);
+    expect(impGrips.width).toBe(mmToInches(2));
   });
 
   it('converts full params between metric and imperial preserving physical size', () => {

@@ -1,8 +1,11 @@
 import type { Geom3 } from '@jscad/modeling/src/geometries/types';
+import type { Vec3 } from '@jscad/modeling/src/maths/types';
+import measureBoundingBox from '@jscad/modeling/src/measurements/measureBoundingBox';
 import measureVolume from '@jscad/modeling/src/measurements/measureVolume';
 import { intersect, union } from '@jscad/modeling/src/operations/booleans';
-import { translate } from '@jscad/modeling/src/operations/transforms';
+import { rotate, scale, translate } from '@jscad/modeling/src/operations/transforms';
 import { cuboid } from '@jscad/modeling/src/primitives';
+import { degToRad } from '@jscad/modeling/src/utils';
 
 import type { Params } from '../params';
 import { base } from './base';
@@ -37,10 +40,26 @@ export const pcbCenterXY = (params: Params): [number, number] => {
   return [width / 2 + pcbPreview.x, length / 2 + pcbPreview.y];
 };
 
-export const pcbBoard = (params: Params): Geom3 => {
+export const pcbBoard = (params: Params, customGeom?: Geom3 | null): Geom3 => {
   const { pcbPreview } = params;
   const [cx, cy] = pcbCenterXY(params);
-  const restZ = pcbRestZ(params);
+  const restZ = pcbRestZ(params) + (pcbPreview.zOffset ?? 0);
+
+  if (customGeom) {
+    let g = customGeom;
+    const s = pcbPreview.scale ?? 1;
+    if (s > 0 && Math.abs(s - 1) > 1e-5) {
+      g = scale([s, s, s], g);
+    }
+    const rx = pcbPreview.rotationX ?? 0;
+    const ry = pcbPreview.rotationY ?? 0;
+    const rz = pcbPreview.rotationZ ?? 0;
+    if (rx !== 0 || ry !== 0 || rz !== 0) {
+      g = rotate([degToRad(rx), degToRad(ry), degToRad(rz)], g);
+    }
+    return translate([cx, cy, restZ], g);
+  }
+
   return translate(
     [cx, cy, restZ + pcbPreview.thickness / 2],
     cuboid({ size: [pcbPreview.width, pcbPreview.length, pcbPreview.thickness] }),
@@ -53,7 +72,7 @@ export const pcbComponentZone = (params: Params): Geom3 | null => {
     return null;
   }
   const [cx, cy] = pcbCenterXY(params);
-  const restZ = pcbRestZ(params);
+  const restZ = pcbRestZ(params) + (pcbPreview.zOffset ?? 0);
   return translate(
     [cx, cy, restZ + pcbPreview.thickness + pcbPreview.componentHeight / 2],
     cuboid({ size: [pcbPreview.width, pcbPreview.length, pcbPreview.componentHeight] }),
@@ -65,7 +84,7 @@ const SHRINK = 0.3;
 const erodedOccupied = (params: Params): Geom3 => {
   const { pcbPreview } = params;
   const [cx, cy] = pcbCenterXY(params);
-  const restZ = pcbRestZ(params);
+  const restZ = pcbRestZ(params) + (pcbPreview.zOffset ?? 0);
 
   const w = Math.max(pcbPreview.width - SHRINK * 2, 0.1);
   const l = Math.max(pcbPreview.length - SHRINK * 2, 0.1);
@@ -89,12 +108,17 @@ const erodedOccupied = (params: Params): Geom3 => {
   return parts.length === 1 ? parts[0] : union(parts);
 };
 
-export const pcbCollision = (params: Params, baseSolid?: Geom3): PCBCollisionResult => {
+export const pcbCollision = (
+  params: Params,
+  baseSolid?: Geom3,
+  customGeom?: Geom3 | null,
+): PCBCollisionResult => {
   if (!params.pcbPreview.enabled) {
     return { collides: false, hitsWalls: false, hitsCeiling: false, overlapVolume: 0 };
   }
 
-  const occupied = erodedOccupied(params);
+  const boardSolid = pcbBoard(params, customGeom);
+  const occupied = customGeom ? boardSolid : erodedOccupied(params);
 
   const obstacles: Geom3[] = [baseSolid ?? base(params)];
   if (params.internalWalls.length > 0) {
@@ -121,8 +145,14 @@ export const pcbCollision = (params: Params, baseSolid?: Geom3): PCBCollisionRes
     hitsWalls = false;
   }
 
-  const restZ = pcbRestZ(params);
-  const topZ = restZ + params.pcbPreview.thickness + Math.max(0, params.pcbPreview.componentHeight);
+  let topZ: number;
+  if (customGeom) {
+    const bbox = measureBoundingBox(boardSolid) as [Vec3, Vec3];
+    topZ = bbox[1][2];
+  } else {
+    const restZ = pcbRestZ(params) + (params.pcbPreview.zOffset ?? 0);
+    topZ = restZ + params.pcbPreview.thickness + Math.max(0, params.pcbPreview.componentHeight);
+  }
   const hitsCeiling = topZ > params.height + 1e-6;
 
   return {

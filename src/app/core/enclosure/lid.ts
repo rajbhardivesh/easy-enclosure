@@ -13,6 +13,8 @@ import { getScrewOffset, lidScrewRecesses, screws } from './screws';
 import { subtract } from '@jscad/modeling/src/operations/booleans';
 import { holes } from './holes';
 import { lidSnapBumps } from './snapfit';
+import { ventGrillesOnLid } from './ventgrille';
+import { displayBezelCutters } from './displaybezel';
 
 const { union } = booleans;
 const { translate } = transforms;
@@ -83,6 +85,16 @@ export const lid = (params: Params) => {
     subtracts.push(holes(params, ['top']));
   }
 
+  const grilles = ventGrillesOnLid(params);
+  if (grilles) {
+    subtracts.push(grilles);
+  }
+
+  const bezel = displayBezelCutters(params);
+  if (bezel) {
+    subtracts.push(bezel);
+  }
+
   const bumps = lidSnapBumps(params);
   if (bumps) {
     entities.push(bumps);
@@ -111,4 +123,3 @@ export const lid = (params: Params) => {
 
   return result;
 };
-

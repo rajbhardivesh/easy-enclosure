@@ -25,7 +25,12 @@ import {
   STL_FORMAT,
 } from '../../core/export/export-format';
 import { ExportFormatService } from '../../core/export/export-format.service';
-import type { Params } from '../../core/params';
+import {
+  DEFAULT_DISPLAY_BEZEL,
+  DEFAULT_LANYARD_LOOP,
+  DEFAULT_SIDE_GRIPS,
+  type Params,
+} from '../../core/params';
 import { EnclosureStateService } from '../../core/state/enclosure-state.service';
 import { toMetricParams } from '../../core/units';
 import { ActionButtonComponent } from '../../shared/action-button/action-button.component';
@@ -177,6 +182,22 @@ export class ToolsComponent {
         pcbPreview: {
           ...current.pcbPreview,
           ...(data.pcbPreview ?? {}),
+        },
+        ventGrilles: data.ventGrilles ?? current.ventGrilles ?? [],
+        displayBezel: {
+          ...DEFAULT_DISPLAY_BEZEL,
+          ...(current.displayBezel ?? {}),
+          ...(data.displayBezel ?? {}),
+        },
+        lanyardLoop: {
+          ...DEFAULT_LANYARD_LOOP,
+          ...(current.lanyardLoop ?? {}),
+          ...(data.lanyardLoop ?? {}),
+        },
+        sideGrips: {
+          ...DEFAULT_SIDE_GRIPS,
+          ...(current.sideGrips ?? {}),
+          ...(data.sideGrips ?? {}),
         },
       };
       this.state.setParams(merged);

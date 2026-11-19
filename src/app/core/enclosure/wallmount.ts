@@ -62,13 +62,8 @@ export const flanges = (params: Params) => {
       ? chamferSolidBottom(flange(wallMountScrewDiameter), params.baseBedChamfer)
       : flange(wallMountScrewDiameter);
 
-  const left = yPositions.map((y) =>
-    translate([-RIDGEWIDTH, y, z], ear),
-  );
-  const right = yPositions.map((y) =>
-    translate([width + RIDGEWIDTH, y, z], mirrorX(ear)),
-  );
+  const left = yPositions.map((y) => translate([-RIDGEWIDTH, y, z], ear));
+  const right = yPositions.map((y) => translate([width + RIDGEWIDTH, y, z], mirrorX(ear)));
 
   return union(...left, ...right);
 };
-

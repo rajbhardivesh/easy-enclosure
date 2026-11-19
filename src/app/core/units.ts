@@ -1,11 +1,15 @@
 import {
   cloneParams,
   type CableClamp,
+  type DisplayBezel,
   type Hole,
   type InternalWall,
+  type LanyardLoop,
   type MeasurementSystem,
   type Params,
   type PCBMount,
+  type SideGrips,
+  type VentGrille,
 } from './params';
 
 export type { MeasurementSystem };
@@ -61,6 +65,77 @@ export const convertHole = (hole: Hole, from: MeasurementSystem, to: Measurement
     width: conv(hole.width),
     length: conv(hole.length),
     flatWidth: hole.flatWidth !== undefined ? conv(hole.flatWidth) : undefined,
+    cornerRadius: hole.cornerRadius !== undefined ? conv(hole.cornerRadius) : undefined,
+    chamfer: hole.chamfer !== undefined ? conv(hole.chamfer) : undefined,
+  };
+};
+
+export const convertVentGrille = (
+  grille: VentGrille,
+  from: MeasurementSystem,
+  to: MeasurementSystem,
+): VentGrille => {
+  if (from === to) return { ...grille };
+  const conv = (v: number) => convertDimension(v, from, to);
+  return {
+    ...grille,
+    x: conv(grille.x),
+    y: conv(grille.y),
+    slotWidth: conv(grille.slotWidth),
+    slotLength: conv(grille.slotLength),
+    spacing: conv(grille.spacing),
+    cornerRadius: grille.cornerRadius !== undefined ? conv(grille.cornerRadius) : undefined,
+  };
+};
+
+export const convertDisplayBezel = (
+  bezel: DisplayBezel,
+  from: MeasurementSystem,
+  to: MeasurementSystem,
+): DisplayBezel => {
+  if (from === to) return { ...bezel };
+  const conv = (v: number) => convertDimension(v, from, to);
+  return {
+    ...bezel,
+    x: conv(bezel.x),
+    y: conv(bezel.y),
+    width: conv(bezel.width),
+    length: conv(bezel.length),
+    cornerRadius: conv(bezel.cornerRadius),
+    recessWidth: conv(bezel.recessWidth),
+    recessLength: conv(bezel.recessLength),
+    recessDepth: conv(bezel.recessDepth),
+  };
+};
+
+export const convertLanyardLoop = (
+  loop: LanyardLoop,
+  from: MeasurementSystem,
+  to: MeasurementSystem,
+): LanyardLoop => {
+  if (from === to) return { ...loop };
+  const conv = (v: number) => convertDimension(v, from, to);
+  return {
+    ...loop,
+    slotWidth: conv(loop.slotWidth),
+    slotLength: conv(loop.slotLength),
+    barDiameter: conv(loop.barDiameter),
+  };
+};
+
+export const convertSideGrips = (
+  grips: SideGrips,
+  from: MeasurementSystem,
+  to: MeasurementSystem,
+): SideGrips => {
+  if (from === to) return { ...grips };
+  const conv = (v: number) => convertDimension(v, from, to);
+  return {
+    ...grips,
+    width: conv(grips.width),
+    length: conv(grips.length),
+    depth: conv(grips.depth),
+    spacing: conv(grips.spacing),
   };
 };
 
@@ -171,6 +246,8 @@ export const convertParams = (params: Params, targetSystem: MeasurementSystem): 
       componentHeight: conv(params.pcbPreview.componentHeight),
       x: conv(params.pcbPreview.x),
       y: conv(params.pcbPreview.y),
+      zOffset:
+        params.pcbPreview.zOffset !== undefined ? conv(params.pcbPreview.zOffset) : undefined,
     },
     holes: (params.holes ?? []).map((h) => convertHole(h, currentSystem, targetSystem)),
     pcbMounts: (params.pcbMounts ?? []).map((m) => convertPCBMount(m, currentSystem, targetSystem)),
@@ -180,6 +257,18 @@ export const convertParams = (params: Params, targetSystem: MeasurementSystem): 
     cableClamps: (params.cableClamps ?? []).map((c) =>
       convertCableClamp(c, currentSystem, targetSystem),
     ),
+    ventGrilles: (params.ventGrilles ?? []).map((g) =>
+      convertVentGrille(g, currentSystem, targetSystem),
+    ),
+    displayBezel: params.displayBezel
+      ? convertDisplayBezel(params.displayBezel, currentSystem, targetSystem)
+      : undefined,
+    lanyardLoop: params.lanyardLoop
+      ? convertLanyardLoop(params.lanyardLoop, currentSystem, targetSystem)
+      : undefined,
+    sideGrips: params.sideGrips
+      ? convertSideGrips(params.sideGrips, currentSystem, targetSystem)
+      : undefined,
   };
 };
 

@@ -40,6 +40,8 @@ import { waterProofSeal } from '../../core/enclosure/waterproofseal';
 import type { Params } from '../../core/params';
 import { toMetricParams } from '../../core/units';
 import { EnclosureStateService } from '../../core/state/enclosure-state.service';
+import { PcbModelService } from '../../core/pcb/pcb-model.service';
+import type { ParsedPcbModel } from '../../core/pcb/pcb-model-loader';
 
 const SPACING = 20;
 
@@ -65,6 +67,8 @@ const lidDeps = [
   'snapFit',
   'lidBedChamfer',
   'lidTopChamfer',
+  'ventGrilles',
+  'displayBezel',
 ];
 const baseDeps = [
   'length',
@@ -94,6 +98,9 @@ const baseDeps = [
   'insertClearance',
   'snapFit',
   'baseBedChamfer',
+  'ventGrilles',
+  'lanyardLoop',
+  'sideGrips',
 ];
 const sealDeps = [
   'length',
@@ -332,6 +339,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
 
   private readonly state = inject(EnclosureStateService);
+  private readonly pcbModelService = inject(PcbModelService);
 
   private readonly perspectiveCamera = cameras.perspective;
   private readonly orbitControls = controls.orbit;
@@ -376,6 +384,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private animationFrame: number | null = null;
 
   private prevParams: Params | null = null;
+  private prevCustomModel: ParsedPcbModel | null = null;
   private renderDelayHandle: ReturnType<typeof setTimeout> | null = null;
   private isViewReady = false;
   private baseOrigin: Vec3Tuple = [0, 0, 0];
@@ -390,6 +399,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   constructor() {
     effect(() => {
       const currentParams = this.state.params();
+      this.pcbModelService.customModel();
       this.scheduleModelRender(currentParams);
     });
   }
@@ -543,7 +553,8 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       return [];
     }
 
-    const collision = pcbCollision(params, this.baseModelLocal ?? undefined);
+    const customGeom = this.pcbModelService.getPcbGeometry(params);
+    const collision = pcbCollision(params, this.baseModelLocal ?? undefined, customGeom);
     this.pcbCollision.set(collision);
 
     const boardColor: [number, number, number, number] = collision.collides
@@ -555,13 +566,15 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     const entities: Entity[] = [];
 
-    const board = translate(this.baseOrigin, pcbBoard(params));
+    const board = translate(this.baseOrigin, pcbBoard(params, customGeom));
     entities.push(...(entitiesFromSolids({}, colorize(boardColor, board)) as Entity[]));
 
-    const zone = pcbComponentZone(params);
-    if (zone) {
-      const placedZone = translate(this.baseOrigin, zone);
-      entities.push(...(entitiesFromSolids({}, colorize(zoneColor, placedZone)) as Entity[]));
+    if (!customGeom) {
+      const zone = pcbComponentZone(params);
+      if (zone) {
+        const placedZone = translate(this.baseOrigin, zone);
+        entities.push(...(entitiesFromSolids({}, colorize(zoneColor, placedZone)) as Entity[]));
+      }
     }
 
     return entities;
@@ -572,9 +585,16 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    const currentCustomModel = this.pcbModelService.customModel();
+    const customModelChanged = this.prevCustomModel !== currentCustomModel;
+
     const paramsDiff = this.prevParams
       ? this.diffParams(this.prevParams, params)
       : Object.keys(params);
+
+    if (customModelChanged && !paramsDiff.includes('pcbPreview')) {
+      paramsDiff.push('pcbPreview');
+    }
 
     if (paramsDiff.length === 0) {
       return;
@@ -590,6 +610,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       void this.renderModel(params, paramsDiff).finally(() => {
         this.state.setLoading(false);
         this.prevParams = JSON.parse(JSON.stringify(params)) as Params;
+        this.prevCustomModel = currentCustomModel;
       });
     }, 250);
   }

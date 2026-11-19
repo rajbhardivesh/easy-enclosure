@@ -2,16 +2,29 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 
 import type {
   CableClamp,
+  DisplayBezel,
   Hole,
   InternalWall,
+  LanyardLoop,
   MeasurementSystem,
   PCBMount,
   Params,
+  PCBModelType,
   PCBPreview,
+  SideGrips,
   SnapFit,
+  VentGrille,
 } from '../../core/params';
-import { DEFAULT_CABLE_CLAMP } from '../../core/params';
+import {
+  DEFAULT_CABLE_CLAMP,
+  DEFAULT_DISPLAY_BEZEL,
+  DEFAULT_LANYARD_LOOP,
+  DEFAULT_SIDE_GRIPS,
+  DEFAULT_VENT_GRILLE,
+} from '../../core/params';
+import { PRESETS, type PresetKey } from '../../core/presets';
 import { EnclosureStateService } from '../../core/state/enclosure-state.service';
+import { PcbModelService } from '../../core/pcb/pcb-model.service';
 import { mmToInches } from '../../core/units';
 
 type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
@@ -24,6 +37,7 @@ type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
 })
 export class ParamsFormComponent {
   private readonly state = inject(EnclosureStateService);
+  readonly pcbModelService = inject(PcbModelService);
 
   readonly activeTab = signal<number | null>(null);
 
@@ -58,6 +72,12 @@ export class ParamsFormComponent {
 
   setActiveTab(tab: number): void {
     this.activeTab.set(this.activeTab() === tab ? null : tab);
+  }
+
+  readonly presets = Object.values(PRESETS);
+
+  applyPreset(key: string): void {
+    this.state.applyPreset(key as PresetKey);
   }
 
   resetToSimpleEnclosure(): void {
@@ -310,5 +330,181 @@ export class ParamsFormComponent {
         },
       });
     }
+  }
+
+  async onPcbFileUpload(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    try {
+      const parsed = await this.pcbModelService.loadFromFile(file);
+      const current = this.params();
+      const isImp = current.measurementSystem === 'imperial';
+      const w = isImp ? mmToInches(parsed.dims[0]) : parsed.dims[0];
+      const l = isImp ? mmToInches(parsed.dims[1]) : parsed.dims[1];
+      const t = isImp ? mmToInches(parsed.dims[2]) : parsed.dims[2];
+      this.state.patchParams({
+        pcbPreview: {
+          ...current.pcbPreview,
+          enabled: true,
+          modelType: 'custom',
+          modelFileName: parsed.name,
+          modelTriangleCount: parsed.triangleCount,
+          width: Number(w.toFixed(2)),
+          length: Number(l.toFixed(2)),
+          thickness: Number(t.toFixed(2)),
+        },
+      });
+    } catch (err) {
+      console.error('Failed to load 3D PCB file:', err);
+    }
+  }
+
+  selectPcbModelType(modelType: PCBModelType): void {
+    const current = this.params();
+    const isImp = current.measurementSystem === 'imperial';
+    let w = current.pcbPreview.width;
+    let l = current.pcbPreview.length;
+    let t = current.pcbPreview.thickness;
+
+    if (modelType === 'rpi-pico') {
+      w = isImp ? mmToInches(21) : 21;
+      l = isImp ? mmToInches(51) : 51;
+      t = isImp ? mmToInches(3) : 3;
+    } else if (modelType === 'arduino-uno') {
+      w = isImp ? mmToInches(53.4) : 53.4;
+      l = isImp ? mmToInches(68.6) : 68.6;
+      t = isImp ? mmToInches(15) : 15;
+    } else if (modelType === 'esp32') {
+      w = isImp ? mmToInches(28) : 28;
+      l = isImp ? mmToInches(52) : 52;
+      t = isImp ? mmToInches(10) : 10;
+    } else if (modelType === 'flipper-module') {
+      w = isImp ? mmToInches(32) : 32;
+      l = isImp ? mmToInches(65) : 65;
+      t = isImp ? mmToInches(10) : 10;
+    }
+
+    this.state.patchParams({
+      pcbPreview: {
+        ...current.pcbPreview,
+        modelType,
+        width: Number(w.toFixed(2)),
+        length: Number(l.toFixed(2)),
+        thickness: Number(t.toFixed(2)),
+      },
+    });
+  }
+
+  clearCustomPcbModel(): void {
+    this.pcbModelService.clearCustomModel();
+    const current = this.params();
+    this.state.patchParams({
+      pcbPreview: {
+        ...current.pcbPreview,
+        modelType: 'box',
+        modelFileName: undefined,
+        modelTriangleCount: undefined,
+      },
+    });
+  }
+
+  addVentGrille(): void {
+    const current = this.params();
+    const isImp = current.measurementSystem === 'imperial';
+    const baseGrille = DEFAULT_VENT_GRILLE;
+    const next: VentGrille = isImp
+      ? {
+          ...baseGrille,
+          slotWidth: mmToInches(baseGrille.slotWidth),
+          slotLength: mmToInches(baseGrille.slotLength),
+          spacing: mmToInches(baseGrille.spacing),
+          cornerRadius:
+            baseGrille.cornerRadius !== undefined ? mmToInches(baseGrille.cornerRadius) : undefined,
+        }
+      : { ...baseGrille };
+    this.state.patchParams({ ventGrilles: [...(current.ventGrilles ?? []), next] });
+  }
+
+  removeVentGrille(index: number): void {
+    const current = this.params();
+    this.state.patchParams({
+      ventGrilles: (current.ventGrilles ?? []).filter((_, i) => i !== index),
+    });
+  }
+
+  updateVentGrille(index: number, patch: Partial<VentGrille>): void {
+    const current = this.params();
+    this.state.patchParams({
+      ventGrilles: (current.ventGrilles ?? []).map((item, i) =>
+        i === index ? { ...item, ...patch } : item,
+      ),
+    });
+  }
+
+  setDisplayBezelEnabled(enabled: boolean): void {
+    const current = this.params();
+    const bezel = current.displayBezel ?? { ...DEFAULT_DISPLAY_BEZEL };
+    this.state.patchParams({
+      displayBezel: {
+        ...bezel,
+        enabled,
+      },
+    });
+  }
+
+  updateDisplayBezel(patch: Partial<DisplayBezel>): void {
+    const current = this.params();
+    const bezel = current.displayBezel ?? { ...DEFAULT_DISPLAY_BEZEL };
+    this.state.patchParams({
+      displayBezel: {
+        ...bezel,
+        ...patch,
+      },
+    });
+  }
+
+  setLanyardLoopEnabled(enabled: boolean): void {
+    const current = this.params();
+    const loop = current.lanyardLoop ?? { ...DEFAULT_LANYARD_LOOP };
+    this.state.patchParams({
+      lanyardLoop: {
+        ...loop,
+        enabled,
+      },
+    });
+  }
+
+  updateLanyardLoop(patch: Partial<LanyardLoop>): void {
+    const current = this.params();
+    const loop = current.lanyardLoop ?? { ...DEFAULT_LANYARD_LOOP };
+    this.state.patchParams({
+      lanyardLoop: {
+        ...loop,
+        ...patch,
+      },
+    });
+  }
+
+  setSideGripsEnabled(enabled: boolean): void {
+    const current = this.params();
+    const grips = current.sideGrips ?? { ...DEFAULT_SIDE_GRIPS };
+    this.state.patchParams({
+      sideGrips: {
+        ...grips,
+        enabled,
+      },
+    });
+  }
+
+  updateSideGrips(patch: Partial<SideGrips>): void {
+    const current = this.params();
+    const grips = current.sideGrips ?? { ...DEFAULT_SIDE_GRIPS };
+    this.state.patchParams({
+      sideGrips: {
+        ...grips,
+        ...patch,
+      },
+    });
   }
 }

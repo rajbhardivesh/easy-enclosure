@@ -1,4 +1,21 @@
 <form id="param-form" (submit)="$event.preventDefault()">
+  <div class="preset-section mb-3">
+    <label
+      class="preset-label text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1.5"
+    >
+      Device Presets
+    </label>
+    <select
+      class="preset-select w-full border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 rounded shadow-xs focus:border-indigo-500 focus:outline-hidden"
+      (change)="applyPreset($any($event.target).value)"
+    >
+      <option value="" disabled selected>Select a Device Preset...</option>
+      @for (p of presets; track p.id) {
+        <option [value]="p.id">{{ p.name }}</option>
+      }
+    </select>
+  </div>
+
   <button type="button" class="simple-reset-btn" (click)="resetToSimpleEnclosure()">
     START FROM SCRATCH
   </button>
@@ -539,6 +556,8 @@
               <option value="square">Square</option>
               <option value="rectangle">Rectangle</option>
               <option value="double-d">Double D</option>
+              <option value="dpad">D-Pad Cross</option>
+              <option value="hexagon">Hexagon</option>
             </select>
           </div>
 
@@ -610,7 +629,85 @@
             </div>
           }
 
-          @if (hole.shape === 'circle' || hole.shape === 'double-d') {
+          @if (hole.shape === 'rectangle' || hole.shape === 'square') {
+            <div class="input-group">
+              <label>Corner Radius ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                [placeholder]="unit()"
+                [value]="hole.cornerRadius ?? 0"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { cornerRadius: +$any($event.target).value })"
+              />
+            </div>
+
+            <div class="input-group">
+              <label>Rotation (°)</label>
+              <input
+                type="number"
+                step="1"
+                [value]="hole.rotation ?? 0"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { rotation: +$any($event.target).value })"
+              />
+            </div>
+          }
+
+          @if (hole.shape === 'dpad') {
+            <div class="input-group">
+              <label>Arm Width ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0.01"
+                step="any"
+                [placeholder]="unit()"
+                [value]="hole.width"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { width: +$any($event.target).value })"
+              />
+            </div>
+
+            <div class="input-group">
+              <label>Total Span ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0.01"
+                step="any"
+                [placeholder]="unit()"
+                [value]="hole.length"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { length: +$any($event.target).value })"
+              />
+            </div>
+
+            <div class="input-group">
+              <label>Corner Radius ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                [placeholder]="unit()"
+                [value]="hole.cornerRadius ?? 0"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { cornerRadius: +$any($event.target).value })"
+              />
+            </div>
+
+            <div class="input-group">
+              <label>Rotation (°)</label>
+              <input
+                type="number"
+                step="1"
+                [value]="hole.rotation ?? 0"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { rotation: +$any($event.target).value })"
+              />
+            </div>
+          }
+
+          @if (hole.shape === 'circle' || hole.shape === 'double-d' || hole.shape === 'hexagon') {
             <div class="input-group">
               <label>Diameter ({{ unit() }})</label>
               <input
@@ -621,6 +718,19 @@
                 [value]="hole.diameter"
                 (keydown.enter)="$any($event.target).blur()"
                 (blur)="updateHole($index, { diameter: +$any($event.target).value })"
+              />
+            </div>
+          }
+
+          @if (hole.shape === 'hexagon') {
+            <div class="input-group">
+              <label>Rotation (°)</label>
+              <input
+                type="number"
+                step="1"
+                [value]="hole.rotation ?? 0"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateHole($index, { rotation: +$any($event.target).value })"
               />
             </div>
           }
@@ -650,6 +760,19 @@
               />
             </div>
           }
+
+          <div class="input-group">
+            <label>Chamfer ({{ unit() }})</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              [placeholder]="unit()"
+              [value]="hole.chamfer ?? 0"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateHole($index, { chamfer: +$any($event.target).value })"
+            />
+          </div>
         </div>
       }
 
@@ -809,6 +932,76 @@
           (change)="setPcbPreviewEnabled($any($event.target).checked)"
         />
       </div>
+
+      <div class="input-group">
+        <label>
+          3D Board Model
+          <span class="help-tip help-tip-right" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip"
+              >Choose a realistic 3D board model, upload custom STL/OBJ, or use parametric box</span
+            >
+          </span>
+        </label>
+        <select
+          [value]="params().pcbPreview.modelType ?? 'box'"
+          (change)="selectPcbModelType($any($event.target).value)"
+        >
+          <option value="box">Parametric Box</option>
+          <option value="rpi-pico">Raspberry Pi Pico (3D)</option>
+          <option value="arduino-uno">Arduino Uno R3 (3D)</option>
+          <option value="esp32">ESP32 DevKit v1 (3D)</option>
+          <option value="flipper-module">Flipper Zero Expansion Module (3D)</option>
+          <option value="custom">Custom 3D Model (.stl / .obj)</option>
+        </select>
+      </div>
+
+      <div class="sub-params !py-2.5 !px-3 !bg-slate-50 !border !border-slate-200 !rounded-md">
+        <div class="flex items-center justify-between gap-2">
+          <input
+            #pcbFileInput
+            type="file"
+            accept=".stl,.obj"
+            style="display: none"
+            (change)="onPcbFileUpload($event)"
+          />
+          <button
+            type="button"
+            class="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded shadow-xs hover:bg-slate-100 hover:text-slate-900 cursor-pointer transition-colors"
+            (click)="pcbFileInput.click()"
+          >
+            Upload 3D PCB (.stl, .obj)
+          </button>
+          @if (params().pcbPreview.modelFileName) {
+            <button
+              type="button"
+              class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 cursor-pointer"
+              (click)="clearCustomPcbModel()"
+            >
+              Clear Custom
+            </button>
+          }
+        </div>
+        @if (params().pcbPreview.modelFileName) {
+          <div class="mt-2 text-[11px] text-slate-600 space-y-0.5">
+            <div><b>File:</b> {{ params().pcbPreview.modelFileName }}</div>
+            <div><b>Triangles:</b> {{ params().pcbPreview.modelTriangleCount }}</div>
+          </div>
+        }
+      </div>
+
       <div class="input-group">
         <label>
           Width ({{ unit() }})
@@ -997,6 +1190,156 @@
           [value]="params().pcbPreview.y"
           (keydown.enter)="$any($event.target).blur()"
           (blur)="setPcbPreviewNumber('y', $any($event.target).value)"
+        />
+      </div>
+      <div class="input-group">
+        <label>
+          Z Offset ({{ unit() }})
+          <span class="help-tip" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip"
+              >Elevation relative to mounting standoffs or floor ({{ unit() }})</span
+            >
+          </span>
+        </label>
+        <input
+          type="number"
+          step="any"
+          [placeholder]="unit()"
+          [value]="params().pcbPreview.zOffset ?? 0"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setPcbPreviewNumber('zOffset', $any($event.target).value)"
+        />
+      </div>
+      <div class="input-group">
+        <label>
+          Scale
+          <span class="help-tip help-tip-right" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip"
+              >Model scale multiplier (e.g. 1.0 for original scale)</span
+            >
+          </span>
+        </label>
+        <input
+          type="number"
+          min="0.01"
+          step="0.05"
+          placeholder="1.0"
+          [value]="params().pcbPreview.scale ?? 1"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setPcbPreviewNumber('scale', $any($event.target).value)"
+        />
+      </div>
+      <div class="input-group">
+        <label>
+          Rotation X (°)
+          <span class="help-tip" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip">Rotation around X axis in degrees</span>
+          </span>
+        </label>
+        <input
+          type="number"
+          step="5"
+          placeholder="0"
+          [value]="params().pcbPreview.rotationX ?? 0"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setPcbPreviewNumber('rotationX', $any($event.target).value)"
+        />
+      </div>
+      <div class="input-group">
+        <label>
+          Rotation Y (°)
+          <span class="help-tip help-tip-right" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip">Rotation around Y axis in degrees</span>
+          </span>
+        </label>
+        <input
+          type="number"
+          step="5"
+          placeholder="0"
+          [value]="params().pcbPreview.rotationY ?? 0"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setPcbPreviewNumber('rotationY', $any($event.target).value)"
+        />
+      </div>
+      <div class="input-group">
+        <label>
+          Rotation Z (°)
+          <span class="help-tip" tabindex="0">
+            <svg
+              class="help-icon"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.75" />
+              <path d="M8 7v4.5M8 4.75v.5" stroke-linecap="round" />
+            </svg>
+            <span class="help-tooltip" role="tooltip">Rotation around Z axis (yaw) in degrees</span>
+          </span>
+        </label>
+        <input
+          type="number"
+          step="5"
+          placeholder="0"
+          [value]="params().pcbPreview.rotationZ ?? 0"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setPcbPreviewNumber('rotationZ', $any($event.target).value)"
         />
       </div>
     </div>
@@ -1489,6 +1832,442 @@
           (blur)="setNumberParam('gridSpacing', $any($event.target).value)"
         />
       </div>
+    </div>
+  </div>
+
+  <div class="accordian" [class.active]="activeTab() === 12">
+    <p class="accordian-header" (click)="setActiveTab(12)">
+      Display Screen Bezel
+      <span class="accordian-icon">{{ activeTab() === 12 ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      <div class="input-group checkbox-group">
+        <label>Enable Display Bezel</label>
+        <input
+          type="checkbox"
+          [checked]="params().displayBezel?.enabled ?? false"
+          (change)="setDisplayBezelEnabled($any($event.target).checked)"
+        />
+      </div>
+
+      @if (params().displayBezel?.enabled) {
+        <div class="input-group">
+          <label>Window Width ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.width ?? 38"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ width: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Window Length ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.length ?? 24"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ length: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Window Corner Radius ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.cornerRadius ?? 2"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ cornerRadius: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>X Offset ({{ unit() }})</label>
+          <input
+            type="number"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.x ?? 0"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ x: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Y Offset ({{ unit() }})</label>
+          <input
+            type="number"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.y ?? 0"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ y: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="sub-section-title">Internal Screen Pocket (Shelf)</div>
+
+        <div class="input-group">
+          <label>Pocket Width ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.recessWidth ?? 42"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ recessWidth: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Pocket Length ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.recessLength ?? 28"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ recessLength: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Pocket Depth ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0.1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().displayBezel?.recessDepth ?? 1.2"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateDisplayBezel({ recessDepth: +$any($event.target).value })"
+          />
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="accordian" [class.active]="activeTab() === 13">
+    <p class="accordian-header" (click)="setActiveTab(13)">
+      Ventilation & Speaker Grilles
+      <span class="accordian-icon">{{ activeTab() === 13 ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      @for (grille of params().ventGrilles ?? []; track $index) {
+        <div class="item-card">
+          <p class="item-card-header">
+            <span>Grille {{ $index + 1 }}</span>
+            <button class="remove-btn" type="button" (click)="removeVentGrille($index)">
+              Remove
+            </button>
+          </p>
+
+          <div class="input-group">
+            <label>Surface</label>
+            <select
+              [value]="grille.surface"
+              (change)="updateVentGrille($index, { surface: $any($event.target).value })"
+            >
+              @for (surface of surfaces; track surface) {
+                <option [value]="surface" [selected]="surface === grille.surface">
+                  {{ surfaceLabel(surface) }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label>Pattern</label>
+            <select
+              [value]="grille.pattern"
+              (change)="updateVentGrille($index, { pattern: $any($event.target).value })"
+            >
+              <option value="slots">Parallel Slots</option>
+              <option value="perforated">Circular Holes</option>
+              <option value="honeycomb">Honeycomb Hex</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label>Slot / Hole Count</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              [value]="grille.count"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { count: parseIntValue($any($event.target).value) })"
+            />
+          </div>
+
+          <div class="input-group">
+            <label>Slot Width / Dia ({{ unit() }})</label>
+            <input
+              type="number"
+              min="0.1"
+              step="any"
+              [placeholder]="unit()"
+              [value]="grille.slotWidth"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { slotWidth: +$any($event.target).value })"
+            />
+          </div>
+
+          @if (grille.pattern === 'slots') {
+            <div class="input-group">
+              <label>Slot Length ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0.1"
+                step="any"
+                [placeholder]="unit()"
+                [value]="grille.slotLength"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateVentGrille($index, { slotLength: +$any($event.target).value })"
+              />
+            </div>
+
+            <div class="input-group">
+              <label>Corner Radius ({{ unit() }})</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                [placeholder]="unit()"
+                [value]="grille.cornerRadius ?? grille.slotWidth / 2"
+                (keydown.enter)="$any($event.target).blur()"
+                (blur)="updateVentGrille($index, { cornerRadius: +$any($event.target).value })"
+              />
+            </div>
+          }
+
+          <div class="input-group">
+            <label>Spacing ({{ unit() }})</label>
+            <input
+              type="number"
+              min="0.1"
+              step="any"
+              [placeholder]="unit()"
+              [value]="grille.spacing"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { spacing: +$any($event.target).value })"
+            />
+          </div>
+
+          <div class="input-group">
+            <label>X ({{ unit() }})</label>
+            <input
+              type="number"
+              step="any"
+              [placeholder]="unit()"
+              [value]="grille.x"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { x: +$any($event.target).value })"
+            />
+          </div>
+
+          <div class="input-group">
+            <label>Y ({{ unit() }})</label>
+            <input
+              type="number"
+              step="any"
+              [placeholder]="unit()"
+              [value]="grille.y"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { y: +$any($event.target).value })"
+            />
+          </div>
+
+          <div class="input-group">
+            <label>Rotation (°)</label>
+            <input
+              type="number"
+              step="1"
+              [value]="grille.rotation ?? 0"
+              (keydown.enter)="$any($event.target).blur()"
+              (blur)="updateVentGrille($index, { rotation: +$any($event.target).value })"
+            />
+          </div>
+        </div>
+      }
+
+      <button class="add-btn" type="button" (click)="addVentGrille()">Add Vent / Grille</button>
+    </div>
+  </div>
+
+  <div class="accordian" [class.active]="activeTab() === 14">
+    <p class="accordian-header" (click)="setActiveTab(14)">
+      Lanyard / Strap Loop
+      <span class="accordian-icon">{{ activeTab() === 14 ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      <div class="input-group checkbox-group">
+        <label>Enable Lanyard Loop</label>
+        <input
+          type="checkbox"
+          [checked]="params().lanyardLoop?.enabled ?? false"
+          (change)="setLanyardLoopEnabled($any($event.target).checked)"
+        />
+      </div>
+
+      @if (params().lanyardLoop?.enabled) {
+        <div class="input-group">
+          <label>Corner Position</label>
+          <select
+            [value]="params().lanyardLoop?.corner ?? 'bottom-right'"
+            (change)="updateLanyardLoop({ corner: $any($event.target).value })"
+          >
+            <option value="bottom-right">Bottom-Right</option>
+            <option value="bottom-left">Bottom-Left</option>
+            <option value="top-right">Top-Right</option>
+            <option value="top-left">Top-Left</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Slot Width ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().lanyardLoop?.slotWidth ?? 3.5"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateLanyardLoop({ slotWidth: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Slot Length ({{ unit() }})</label>
+          <input
+            type="number"
+            min="2"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().lanyardLoop?.slotLength ?? 10"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateLanyardLoop({ slotLength: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Retention Bar Diameter ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0.5"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().lanyardLoop?.barDiameter ?? 2"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateLanyardLoop({ barDiameter: +$any($event.target).value })"
+          />
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="accordian" [class.active]="activeTab() === 15">
+    <p class="accordian-header" (click)="setActiveTab(15)">
+      Ergonomic Side Grips
+      <span class="accordian-icon">{{ activeTab() === 15 ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      <div class="input-group checkbox-group">
+        <label>Enable Side Grips</label>
+        <input
+          type="checkbox"
+          [checked]="params().sideGrips?.enabled ?? false"
+          (change)="setSideGripsEnabled($any($event.target).checked)"
+        />
+      </div>
+
+      @if (params().sideGrips?.enabled) {
+        <div class="input-group">
+          <label>Grip Style</label>
+          <select
+            [value]="params().sideGrips?.style ?? 'ribs'"
+            (change)="updateSideGrips({ style: $any($event.target).value })"
+          >
+            <option value="ribs">Raised Ribs</option>
+            <option value="grooves">Recessed Grooves</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Rib Count</label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            [value]="params().sideGrips?.count ?? 6"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateSideGrips({ count: parseIntValue($any($event.target).value) })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Rib Thickness ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0.2"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().sideGrips?.width ?? 2"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateSideGrips({ width: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Rib Height ({{ unit() }})</label>
+          <input
+            type="number"
+            min="1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().sideGrips?.length ?? 14"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateSideGrips({ length: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Protrusion / Depth ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0.1"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().sideGrips?.depth ?? 1"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateSideGrips({ depth: +$any($event.target).value })"
+          />
+        </div>
+
+        <div class="input-group">
+          <label>Spacing ({{ unit() }})</label>
+          <input
+            type="number"
+            min="0.5"
+            step="any"
+            [placeholder]="unit()"
+            [value]="params().sideGrips?.spacing ?? 3.5"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateSideGrips({ spacing: +$any($event.target).value })"
+          />
+        </div>
+      }
     </div>
   </div>
 </form>
